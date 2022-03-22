@@ -10,7 +10,7 @@ defmodule PlugCollectTest do
       send_resp(conn, 200, "200")
     end
 
-    match "/404" do
+    get "/404" do
       send_resp(conn, 404, "404")
     end
 
