@@ -1,5 +1,8 @@
 # PlugCollect
 
+[![Hex Version](https://img.shields.io/hexpm/v/plug_collect)](https://hex.pm/packages/plug_collect)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen)](https://hexdocs.pm/plug_collect)
+
 Basic instrumentation library to intercept and collect Plug pipeline connection parameters for
 further reporting, monitoring or analysis with user provided function.
 
@@ -14,7 +17,7 @@ Add `plug_collect` to your application dependencies list in `mix.exs`:
 #mix.exs
 def deps do
   [
-    {:plug_collect, github: "recruitee/plug_collect", branch: "master"}
+    {:plug_collect, "~> 0.1.1"}
   ]
 end
 ```
