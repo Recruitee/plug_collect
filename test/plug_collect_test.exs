@@ -124,7 +124,7 @@ defmodule PlugCollectTest do
       refute :persistent_term.get(:on_success)
       refute :persistent_term.get(:on_error)
 
-      assert_raise Plug.Conn.WrapperError, "** (ArgumentError) argument error", fn ->
+      assert_raise Plug.Conn.WrapperError, fn ->
         :get |> conn("/badarg") |> CollectRouter.call([])
       end
 
