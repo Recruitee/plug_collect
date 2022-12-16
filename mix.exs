@@ -2,7 +2,7 @@ defmodule PlugCollect.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/Recruitee/plug_collect"
-  @version "0.1.1"
+  @version "0.2.0"
 
   def project do
     [
@@ -22,7 +22,7 @@ defmodule PlugCollect.MixProject do
 
   defp deps() do
     [
-      {:ex_doc, "~> 0.28.0", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.29.0", only: :dev, runtime: false},
       {:plug, ">= 1.1.0"}
     ]
   end

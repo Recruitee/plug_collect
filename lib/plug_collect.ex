@@ -1,47 +1,52 @@
 defmodule PlugCollect do
   @moduledoc """
   Basic instrumentation library to intercept and collect Plug pipeline connection parameters for
-  further reporting, monitoring or analysis with user provided callback function.
+  further reporting, monitoring or analysis with user provided callback functions.
 
-  Functionality provided by PlugCollect is very similar to one offered by
-  `Plug.Conn.register_before_send/2` function.
-  `register_before_send/2` registers a callback to be invoked before the response is sent.
-  When using `register_before_send/2`, user defined callback will not be invoked if response
-  processing pipeline raises.
+  PlugCollect functionality is similar to this provided by `Plug.Conn.register_before_send/2`
+  or `Plug.ErrorHandler`.
 
-  PlugCollect similarly to `register_before_send/2` registers a callback to be invoked before
-  sending response, however callback function is always executed, even if response pipeline fails.
+  PlugCollect registers a user defined callback "collectors" functions that will be applied before
+  sending request response.
+  Callback functions are applied always, even if request response pipeline fails.
 
   ### Usage
-  Add `use PlugCollect` to your application's Phoenix endpoint or router, for example:
+  Add `use PlugCollect` to your application's Phoenix endpoint or router with your callback
+  functions defined with a required `:collectors` key as a list, for example:
   ```elixir
   #router.ex
   defmodule MyAppWeb.Router do
     use MyAppWeb, :router
-    use PlugCollect, collect_fun: &MyApp.MyModule.my_collect/2
+    use PlugCollect,
+      collectors: [
+        &MyApp.MyModule.my_collect1/2,
+        {MyApp.MyModule, :my_collect2}
+      ]
     # ...
   end
   ```
 
-  Using `PlugCollect` **requires** `:collect_fun` parameter specifying a user defined
-  callback function with two arity.
-
-  Callback function defined by `:collect_fun` key has following characteristics:
-  1. As a first argument function will receive an atom `:ok` or `:error` describing request
+  Callback functions defined with a `:collectors` list have following characteristics:
+  1. As a first argument callback function will receive an atom `:ok` or `:error` describing request
      pipeline processing status.
-     `:ok` atom means that intercepted request was processed successfully by Plug pipeline.
+     `:ok` atom means that intercepted request was processed successfully by a Plug pipeline.
      `:error` means that during request processing, pipeline raised, exited or did throw an error.
   2. As a second argument function will receive a `Plug.Conn` struct with current pipeline
-     connection.
-  3. Callback function is invoked on each Plug request, after processing entire Plug pipeline
-     defined below `use PlugCollect` statement.
-  4. Function is executed even if code declared after `use PlugCollect` raises, exits or throws an
+     connection. `Plug.Conn` struct is normalized using approach similar to this implemented in a
+     `Plug.ErrorHandler`.
+  3. Callback functions are applied after processing entire Plug pipeline defined below
+     `use PlugCollect` statement.
+  4. Functions are executed even if code declared after `use PlugCollect` raises, exits or throws an
      error.
-  5. Callback function is executed synchronously. It should not contain any blocking or costly IO
-     operations, as it would delay or block sending request response to the user.
-  6. Callback function result is ignored.
+  5. Callback functions are executed synchronously. They should not contain any blocking or costly IO
+     operations, as it would delay or block sending request response to the user. Async processing
+     can be easily achieved by using for example `spawn/1` in a collector function body.
+  6. Callback functions results are ignored.
+  7. Callback functions are executed in the order in which they appear in the `:collectors` list.
+  8. Callback functions can be provided using anonymous function reference syntax or with
+     `{module, function}` tuple.
 
-  Example `:collect_fun` implementation:
+  Example collector function implementation:
   ```elixir
   defmodule MyApp.MyModule do
     def my_collect(:ok, %Plug.Conn{assigns: assigns} = _conn),
@@ -53,31 +58,45 @@ defmodule PlugCollect do
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
-      @collect_fun Keyword.fetch!(opts, :collect_fun)
+      @before_compile PlugCollect
+      @collectors Keyword.fetch!(opts, :collectors)
+    end
+  end
+
+  defmacro __before_compile__(_) do
+    quote do
+      defoverridable call: 2
 
       def call(conn, opts) do
         super(conn, opts)
       rescue
         error ->
-          apply(@collect_fun, [:error, prepare_conn(error, conn)])
+          apply_collectors(:error, normalize_conn(error, conn))
           :erlang.raise(:error, error, __STACKTRACE__)
       catch
         kind, reason ->
-          apply(@collect_fun, [:error, prepare_conn(reason, conn)])
+          apply_collectors(:error, normalize_conn(reason, conn))
           :erlang.raise(kind, reason, __STACKTRACE__)
       else
         conn ->
-          apply(@collect_fun, [:ok, conn])
+          apply_collectors(:ok, conn)
           conn
       end
 
-      def prepare_conn(%{conn: conn, plug_status: status}, _conn) when is_integer(status),
-        do: Map.put(conn, :status, status)
+      defp apply_collectors(status, conn) do
+        Enum.each(@collectors, fn collector ->
+          case collector do
+            c when is_function(c, 2) -> apply(c, [status, conn])
+            {m, f} -> apply(m, f, [status, conn])
+          end
+        end)
+      end
 
-      def prepare_conn(%{conn: conn}, _conn), do: conn
-      def prepare_conn(_err, %Plug.Conn{} = conn), do: conn
+      defp normalize_conn(%{conn: conn, plug_status: status}, _conn),
+        do: Plug.Conn.put_status(conn, status)
 
-      defoverridable call: 2
+      defp normalize_conn(%{conn: conn}, _conn), do: conn
+      defp normalize_conn(_err, %Plug.Conn{} = conn), do: conn
     end
   end
 end
