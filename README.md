@@ -6,10 +6,9 @@
 Basic instrumentation library to intercept and collect Plug pipeline connection parameters for
 further reporting, monitoring or analysis with user provided function.
 
-PlugCollect is inspired by other similar libraries:
+PlugCollect is inspired by other libraries:
 * [Appsignal.Plug](https://github.com/appsignal/appsignal-elixir-plug),
 * [Sentry.PlugCapture](https://github.com/getsentry/sentry-elixir).
-
 
 ## Installation
 Add `plug_collect` to your application dependencies list in `mix.exs`:
@@ -17,7 +16,7 @@ Add `plug_collect` to your application dependencies list in `mix.exs`:
 #mix.exs
 def deps do
   [
-    {:plug_collect, "~> 0.1.1"}
+    {:plug_collect, "~> 0.2.0"}
   ]
 end
 ```
@@ -27,13 +26,13 @@ Add `use PlugCollect` to your application's Phoenix endpoint or router, for exam
 ```elixir
 #endpoint.ex
 defmodule MyAppWeb.Endpoint do
-  use PlugCollect, collect_fun: &MyApp.Monitor.my_collect/2
+  use PlugCollect, collectors: [&MyApp.Monitor.my_collect/2]
   use Phoenix.Endpoint, otp_app: :my_app
   # ...
 ```
 
 Callback function `MyApp.Monitor.my_collect/2` will be invoked on each request.
-Example `:collect_fun` callback implementation:
+Example `my_collect/2` callback implementation:
 ```elixir
 defmodule MyApp.Monitor do
   def my_collect(_status, %Plug.Conn{assigns: assigns} = _conn),
