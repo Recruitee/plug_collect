@@ -2,6 +2,7 @@
 
 [![Hex Version](https://img.shields.io/hexpm/v/plug_collect)](https://hex.pm/packages/plug_collect)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen)](https://hexdocs.pm/plug_collect)
+[![CI](https://github.com/Recruitee/plug_collect/workflows/CI/badge.svg)](https://github.com/Recruitee/plug_collect/actions/workflows/ci.yml)
 
 Basic instrumentation library to intercept and collect Plug pipeline connection parameters for
 further reporting, monitoring or analysis with user provided function.
